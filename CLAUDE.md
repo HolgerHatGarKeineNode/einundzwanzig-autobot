@@ -27,14 +27,19 @@ dort nachsehen statt raten:
 
 ## Eiserne Regeln
 
-1. **Dry-Run zuerst.** Live publiziert NUR `tools/edit-article.run.js` mit `--publish`
-   im Job — und das nur nach ausdrücklicher menschlicher Freigabe in derselben Sitzung.
-   Nach jedem Publish: Relay-Verifikation (kind 30023, `#d`-Filter), nie der UI glauben.
+1. **Gates vor jedem Publish.** Live publizieren NUR `tools/edit-article.run.js` (neue
+   Artikel) bzw. `tools/quick-edit.run.js` (Text-Updates bestehender Artikel) mit
+   `--publish` im Job — und das nur nach ausdrücklicher menschlicher Freigabe in
+   derselben Sitzung. Die must/must-not/Sanity-Gates laufen in beiden Runnern zwingend
+   VOR dem Signieren — ein separater Dry-Run-Lauf ist NICHT nötig (bei Unsicherheit:
+   `quick-edit` ohne `--publish` = Preview). Nach jedem Publish: Relay-Verifikation
+   (kind 30023, `#d`-Filter — quick-edit macht sie automatisch), nie der UI glauben.
 2. **Schreibregeln sind Pflicht** (`WRITING_RULES.md`): stilles Grounding (Quelle/Buch
    NIE nennen), Haltung nie etikettieren, Text humanisieren.
 3. **Grounding:** `cat contexts/active` → `contexts/<name>/grounding.md` VOLLSTÄNDIG
-   laden, bevor geschrieben wird (Default: `kryptooekonomie`). Neue Kontexte aus PDFs:
-   `contexts/README.md`.
+   laden, bevor NEU geschrieben wird (Default: `kryptooekonomie`). Für reine
+   Text-Patches an bestehenden (bereits geerdeten) Artikeln reicht gezieltes Laden
+   der themenrelevanten Abschnitte. Neue Kontexte aus PDFs: `contexts/README.md`.
 4. **Ein Session-Ordner pro Run:** `sessions/YYYY-MM-DD-<slug>/` — nichts flach ins Root.
 5. **Bild-QA ist Pflicht** für jedes generierte Bild (`imagegen/QA_RUBRIC.md`, max 3 Re-Rolls).
 6. **Secrets** (`.env`, `bridge/connect.inject.js`) nie loggen, nie committen.
@@ -51,7 +56,14 @@ dort nachsehen statt raten:
 ## Technik-Eckpunkte
 
 - `tools/*.run.js` = genau EIN `async (page) => {…}`-Ausdruck (MCP-Loader evalt sie);
-  Parameter via generierte `tools/jobs/*.inject.js` (`gen-edit-job.cjs`, `gen-upload-job.cjs`).
+  Parameter via generierte `tools/jobs/*.inject.js` (`gen-edit-job.cjs`, `gen-upload-job.cjs`,
+  `gen-quick-edit-job.cjs`).
+- **dTag = öffentlicher URL-Slug** (`/s/<site>/<dTag>`), nach dem ersten Teilen
+  unveränderlich. Neue Artikel: `gen-edit-job.cjs` OHNE `--dtag` aufrufen → Titel-Slug
+  wird erzeugt. NIE den App-Fallback `draft-<timestamp>` übernehmen (`useEditor.js:12`
+  generiert ihn, wenn die Editor-Route ohne articleKey geöffnet wird). Vor dem ersten
+  Publish eines neuen Slugs: Relay-Check, dass kein fremder Artikel ihn belegt.
+  Bestehende Artikel behalten ihren dTag (Replace) — auch wenn er hässlich ist.
 - FLUX2: `/home/user/Apps/FLUX2/.venv/bin/python imagegen/generate.py --manifest …`
   (Manifest liegt IM Session-Ordner, `output_dir` ebenda).
 - Playwright-MCP global konfiguriert in `~/.claude/playwright-mcp.config.json`

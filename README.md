@@ -43,17 +43,22 @@ autobot/
 | `tools/gen-upload-job.cjs` | `node … --files <pfad/ordner[,…]> [--server url]` | Upload-Job schreiben (Ordner → alle Bilder). |
 | `tools/blossom-upload.run.js` | browser_run_code (filename) | Headless BUD-02-Upload der Job-Dateien → `[{file,url,hash}]`. |
 | `tools/gen-illustrated.cjs` | `node … <sessionDir>` | `article.md` + `article-meta.json` + `image-urls.json` → spec/inject/illustrated. |
-| `tools/gen-edit-job.cjs` | `node … --dtag <d> --spec <spec.json> [--publish] [--must csv] [--must-not csv] [--h2 n]` | Edit-Job schreiben. |
-| `tools/edit-article.run.js` | browser_run_code (filename) | Artikel anlegen/editieren über Edit-Route, Checks, Save locally, optional Live-Publish. Enthält alle Gotcha-Absicherungen (ProseMirror-Selektion, ignoreNextUpdate-Race, Signer-Guard, Bild+Tags-Pflicht). |
+| `tools/gen-edit-job.cjs` | `node … [--dtag <d>] --spec <spec.json> [--publish] [--must csv] [--must-not csv] [--h2 n]` | Edit-Job schreiben. **Neue Artikel: `--dtag` weglassen** → Titel-Slug wird erzeugt (dTag = öffentlicher URL-Slug `/s/<site>/<dTag>`, nach dem Teilen unveränderlich — nie den App-Fallback `draft-<timestamp>` übernehmen). Bestehende Artikel: ihren dTag übergeben (Replace). |
+| `tools/edit-article.run.js` | browser_run_code (filename) | Artikel anlegen/editieren über Edit-Route, Checks, Save locally, optional Live-Publish. Enthält alle Gotcha-Absicherungen (ProseMirror-Selektion, ignoreNextUpdate-Race, Signer-Guard, Bild+Tags-Pflicht). Für NEUE Artikel. |
+| `tools/gen-quick-edit-job.cjs` | `node … --dtag <d> (--patch <patches.json> \| --spec <spec.json>) [--publish] [--must csv] [--must-not csv] [--title/--summary/--image …]` | Quick-Edit-Job schreiben (patches.json = `[{search, replace}]`, search muss exakt 1× matchen). |
+| `tools/quick-edit.run.js` | browser_run_code (filename) | **SCHNELLSTER Weg für Text-Updates bestehender Artikel:** patcht das Live-Event direkt (Relay-Fetch → Patch → Gates → signEvent → Backend-POST + Relay-Broadcast → Relay-Verifikation) — EIN Lauf, kein Editor, kein separater Dry-Run (Gates laufen zwingend vor dem Signieren; `publish=false` = Preview). |
 
 Bridge neu bauen nach Änderung: `npx esbuild bridge/bunker-bridge.entry.js --bundle --format=iife --platform=browser --target=es2020 --outfile=bridge/bunker-bridge.iife.js  # nostr-tools ggf. aus ~/Code/standup/node_modules auflösen`
 
 ## Dry-Run-Sicherheit
 
 Live wird ein Nostr-Event **nur** durch den Publish-Schritt erzeugt (kind 30023 —
-`edit-article.run.js` nur mit `--publish` im Job, und das nur auf ausdrückliche
-menschliche Freigabe in derselben Sitzung). Alles andere (Editor füllen, Save locally,
-Preview, Uploads zu Blossom) ist ungefährlich bzw. ersetzt nichts Öffentliches.
+`edit-article.run.js`/`quick-edit.run.js` nur mit `--publish` im Job, und das nur auf
+ausdrückliche menschliche Freigabe in derselben Sitzung). Alles andere (Editor füllen,
+Save locally, Preview, Uploads zu Blossom) ist ungefährlich bzw. ersetzt nichts Öffentliches.
+**Text-Updates bestehender Artikel:** `quick-edit.run.js` ist der Standardweg — die Gates
+(must/must-not/Längen-Sanity) laufen dort zwingend VOR dem Signieren im selben Lauf und
+ersetzen den früheren separaten Dry-Run-Lauf; danach automatische Relay-Verifikation.
 Details: `docs/CLAUDE_MCP_PLAYBOOK.md` + `docs/ARTICLE_EDITOR.md`.
 
 ## Status (historisch)
