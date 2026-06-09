@@ -1,0 +1,22 @@
+# Secrets — niemals committen
+.env
+bridge/connect.inject.js
+
+# Generiertes Bundle (aus bridge/bunker-bridge.entry.js via esbuild reproduzierbar)
+bridge/bunker-bridge.iife.js
+
+# Ephemere Job-Parameter (pro Lauf neu erzeugt)
+tools/jobs/*.inject.js
+
+# Wissens-Kontexte: Quell-PDFs/Volltexte (Urheberrecht, groß) — lokal halten
+contexts/*/
+!contexts/README.md
+
+# Session-Artefakte (Bilder, Logs, generierte Specs) — lokal halten
+sessions/*/
+!sessions/README.md
+
+# Sonstiges
+__pycache__/
+*.pyc
+.playwright-mcp/
