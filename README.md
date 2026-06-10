@@ -1,7 +1,7 @@
 # Einundzwanzig Autobot
 
 Claude schreibt, illustriert und publiziert Longform-Artikel (Nostr kind 30023)
-auf einer [Einundzwanzig-Board](https://github.com/Buho-Ecosystem/standup)-Instanz —
+auf einer [Einundzwanzig-Board](https://media.einundzwanzig.space)-Instanz —
 gesteuert über Playwright-MCP, geerdet auf **deine eigenen Wissens-Kontexte**
 (z. B. ein Buch als PDF), standardmäßig im **Dry-Run** (lokaler Draft).
 Live-Publish nur auf ausdrückliche Freigabe.
