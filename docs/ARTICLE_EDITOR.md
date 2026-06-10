@@ -13,19 +13,19 @@ Präzise Parameter-Referenz für das Erstellen eines NIP-23 Longform-Artikels (k
 
 | Rolle | Datei |
 |---|---|
-| View / Orchestrator | `/home/user/Code/standup/src/views/dashboard/EditorView.vue` |
-| Editor-State (Composable) | `/home/user/Code/standup/src/composables/useEditor.js` |
-| Metadaten-Sidebar | `/home/user/Code/standup/src/components/editor/EditorMetadata.vue` |
-| Speichern/Publish-Toolbar | `/home/user/Code/standup/src/components/editor/EditorToolbar.vue` |
-| Markdown-Format-Toolbar | `/home/user/Code/standup/src/components/editor/EditorFormatToolbar.vue` |
-| Milkdown-Editor | `/home/user/Code/standup/src/components/editor/ArticleEditor.vue` |
-| Vorschau | `/home/user/Code/standup/src/components/editor/ArticlePreview.vue` |
-| Publish-Overlay | `/home/user/Code/standup/src/components/editor/PublishingOverlay.vue` |
-| Draft-Store | `/home/user/Code/standup/src/stores/draft.store.js` |
-| Draft/Publish-Service | `/home/user/Code/standup/src/services/draft.service.js` |
-| Event-Builder | `/home/user/Code/standup/src/services/event-builder.service.js` |
-| Kind-Konstanten | `/home/user/Code/standup/src/constants/nostr.js` |
-| UI-Konstanten | `/home/user/Code/standup/src/constants/ui.js` |
+| View / Orchestrator | `<standup>/src/views/dashboard/EditorView.vue` |
+| Editor-State (Composable) | `<standup>/src/composables/useEditor.js` |
+| Metadaten-Sidebar | `<standup>/src/components/editor/EditorMetadata.vue` |
+| Speichern/Publish-Toolbar | `<standup>/src/components/editor/EditorToolbar.vue` |
+| Markdown-Format-Toolbar | `<standup>/src/components/editor/EditorFormatToolbar.vue` |
+| Milkdown-Editor | `<standup>/src/components/editor/ArticleEditor.vue` |
+| Vorschau | `<standup>/src/components/editor/ArticlePreview.vue` |
+| Publish-Overlay | `<standup>/src/components/editor/PublishingOverlay.vue` |
+| Draft-Store | `<standup>/src/stores/draft.store.js` |
+| Draft/Publish-Service | `<standup>/src/services/draft.service.js` |
+| Event-Builder | `<standup>/src/services/event-builder.service.js` |
+| Kind-Konstanten | `<standup>/src/constants/nostr.js` |
+| UI-Konstanten | `<standup>/src/constants/ui.js` |
 
 Relevante Konstanten (verbatim):
 - `KIND_ARTICLE = 30023`, `KIND_DRAFT = 30024`, `KIND_ENCRYPTED_DRAFT = 31234`, `KIND_DELETION = 5`

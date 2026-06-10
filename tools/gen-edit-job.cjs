@@ -1,8 +1,8 @@
 // Autobot — Generator für tools/jobs/edit-job.inject.js (Parameter für edit-article.run.js).
 //
 //   node autobot/tools/gen-edit-job.cjs [--dtag <dTag>] --spec <article-spec.json> \
-//        [--publish] [--must "Timechain,Positionspapiere"] \
-//        [--must-not "Voskuil,stoisch"] [--h2 6]
+//        [--publish] [--must "Begriff1,Begriff2"] \
+//        [--must-not "Quellautor,Etikett"] [--h2 6]
 //
 // dTag = der ÖFFENTLICHE URL-SLUG des Artikels (/s/<site>/<dTag>) — nach dem ersten
 // Teilen unveränderlich! NEUE Artikel: --dtag WEGLASSEN → es wird automatisch ein
@@ -42,6 +42,7 @@ if (!dTag) {
 if (/^draft-\d+$/.test(dTag) && args.includes('--publish')) {
   console.warn('⚠️  dTag "' + dTag + '" ist ein App-generierter Timestamp — wird als hässlicher URL-Slug veröffentlicht. Für NEUE Artikel --dtag weglassen (Titel-Slug); für bestehende Artikel ok (Slug ist bereits öffentlich).')
 }
+const cfg = require('./lib/load-config.cjs')(path.join(__dirname, '..'))
 const job = {
   dTag,
   title: spec.title,
@@ -51,8 +52,12 @@ const job = {
   content: spec.content,
   publish: args.includes('--publish'),
   mustContain: (get('--must') || '').split(',').map(s => s.trim()).filter(Boolean),
-  // Default = die Pflicht-Tabus aus WRITING_RULES.md (gleicher Default wie gen-quick-edit-job.cjs)
-  mustNotContain: (get('--must-not') || 'Voskuil,stoisch,Stoizismus').split(',').map(s => s.trim()).filter(Boolean),
+  // Tabu-Gate: --must-not gewinnt, sonst mustNotDefault aus der Config
+  // (persönliche Tabus + Quell-Autoren — siehe WRITING_RULES.md §4)
+  mustNotContain: (mn => mn
+    ? mn.split(',').map(s => s.trim()).filter(Boolean)
+    : (cfg.mustNotDefault || [])
+  )(get('--must-not')),
   expectH2: (h2 => h2 ? Number(h2) : null)(get('--h2')),
 }
 const out = path.join(__dirname, 'jobs', 'edit-job.inject.js')

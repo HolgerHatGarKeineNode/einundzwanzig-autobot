@@ -22,7 +22,8 @@ const files = filesArg.split(',').map(s => s.trim()).filter(Boolean).flatMap((p)
 })
 if (!files.length) { console.error('keine Dateien gefunden'); process.exit(1) }
 
-const job = { files, server: get('--server') || 'https://cdn.satellite.earth' }
+const cfg = require('./lib/load-config.cjs')(path.join(__dirname, '..'))
+const job = { files, server: get('--server') || cfg.blossomServers[0] }
 const out = path.join(__dirname, 'jobs', 'upload-job.inject.js')
 fs.writeFileSync(out, 'window.__uploadJob = ' + JSON.stringify(job) + ';\n')
 console.log('wrote', out, '—', files.length, 'Dateien →', job.server)

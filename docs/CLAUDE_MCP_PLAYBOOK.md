@@ -12,16 +12,16 @@ Diese App nutzt **Hash-Routing** (`createWebHashHistory`). Alle URLs sind hash-p
 
 ### Vorbedingungen
 
-- `/autobot/.env` enthält:
+- `.env` (Projektroot) enthält:
   - `NOSTR_BUNKER_URL=bunker://<bunkerPubkey>?relay=wss://...&secret=...`
-  - `TARGET_BASE_URL=https://media.einundzwanzig.space`
-  - `HEADLESS=false` (beim Entwickeln sichtbar lassen)
+  - `NOSTR_CLIENT_SK=<64 hex>` (von `npm run setup` erzeugt)
+- Die Ziel-URL kommt aus `autobot.config.json` (`baseUrl`).
 - Die `.env` ist **gitignored** und wird **nie** committet. Den Wert von `NOSTR_BUNKER_URL` **niemals** in Logs, Snapshots oder Ausgaben ausgeben.
 
 #### Env laden (kein `cat` der Secrets in den Chat)
 
 ```bash
-set -a; source /home/user/Code/einundzwanzig-autobot/.env; set +a
+set -a; source .env; set +a   # im Projektroot
 ```
 
 Die `bunker://`-URL bleibt in `$NOSTR_BUNKER_URL` und wird nur über `browser_run_code`/`browser_evaluate` per Closure in den Seitenkontext gereicht — nie als Klartext in einen Snapshot.

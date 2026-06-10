@@ -16,8 +16,12 @@
 // injiziert die Bridge selbst nach, wenn window.nostr fehlt.
 // ⚠️ job.publish=true ist eine LIVE-AKTION — nur mit ausdrücklicher Freigabe.
 async (page) => {
-  const DIR = '/home/user/Code/einundzwanzig-autobot'
-  const BASE = 'https://media.einundzwanzig.space'
+  const fs = require('fs')
+  const DIR = [process.env.AUTOBOT_DIR, process.cwd()].find(d => d && fs.existsSync(d + '/autobot.config.json'))
+  if (!DIR) return { ok: false, stage: 'config', error: 'autobot.config.json nicht gefunden — Claude im Projektordner starten oder AUTOBOT_DIR setzen' }
+  const CFG = JSON.parse(fs.readFileSync(DIR + '/autobot.config.json', 'utf8'))
+  if (fs.existsSync(DIR + '/autobot.config.local.json')) Object.assign(CFG, JSON.parse(fs.readFileSync(DIR + '/autobot.config.local.json', 'utf8')))
+  const BASE = CFG.baseUrl
 
   // 0) Auf der Plattform-Origin sein (same-origin API + Relay-CSP). Die App
   // selbst wird nicht gebraucht — DOM-Ready genügt für fetch/WebSocket.

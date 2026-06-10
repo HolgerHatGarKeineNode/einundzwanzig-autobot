@@ -1,0 +1,35 @@
+{
+  "_comment": "Zentrale, NICHT-geheime Konfiguration. Secrets (Bunker-URL, Client-Key) gehören in .env! Persönliche Abweichungen NICHT hier ändern, sondern in autobot.config.local.json (gitignored) — jedes Tool, das diese Config liest, merged sie drüber. Shallow: ein lokaler Schlüssel ersetzt den Basis-Schlüssel als GANZES (bei 'relays' also die komplette Liste mitkopieren).",
+
+  "_baseUrl": "Die Ziel-Plattform (Einundzwanzig-Board-Instanz), die der Autobot steuert.",
+  "baseUrl": "https://media.einundzwanzig.space",
+
+  "_blossomServers": "Blossom-Server (BUD-02) für Bild-Uploads — der ERSTE Eintrag ist Primary und Default für gen-upload-job.cjs.",
+  "blossomServers": [
+    "https://cdn.satellite.earth",
+    "https://nostr.download",
+    "https://blossom.primal.net"
+  ],
+
+  "_relays": "Longform-Relays (kind 30023) — genutzt von quick-edit (Fetch, Broadcast, Verifikation). Bei eigener Plattform-Instanz mit deren Relay-Liste sync halten.",
+  "relays": {
+    "longform": [
+      "wss://nostr.einundzwanzig.space",
+      "wss://nostr-02.yakihonne.com",
+      "wss://nostr-01.yakihonne.com",
+      "wss://nostr.vulpem.com",
+      "wss://nostr.mom",
+      "wss://offchain.pub",
+      "wss://relay.damus.io",
+      "wss://nos.lol",
+      "wss://relay.primal.net",
+      "wss://relay.snort.social"
+    ]
+  },
+
+  "_flux2Python": "Python-Interpreter für imagegen/generate.py, relativ zum Projektroot oder absolut. OPTIONAL — Setup und Alternativen: imagegen/INSTALL.md.",
+  "flux2Python": "imagegen/.venv/bin/python",
+
+  "_mustNotDefault": "Default für das --must-not-Gate von gen-edit-job.cjs / gen-quick-edit-job.cjs (Substring-Check vor dem Signieren). PERSÖNLICHE Tabu-Wörter (Autorennamen der eigenen Kontexte etc.) in autobot.config.local.json pflegen — siehe WRITING_RULES.md §4.",
+  "mustNotDefault": []
+}

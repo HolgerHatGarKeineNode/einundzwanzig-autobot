@@ -1,0 +1,21 @@
+{
+  "name": "einundzwanzig-autobot",
+  "version": "1.0.0",
+  "description": "Claude-gesteuerte Playwright-MCP-Automation für das Einundzwanzig Board (Nostr-Longform): Artikel schreiben, illustrieren, hochladen, publizieren.",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "node tools/setup.cjs",
+    "build:bridge": "esbuild bridge/bunker-bridge.entry.js --bundle --format=iife --platform=browser --target=es2020 --outfile=bridge/bunker-bridge.iife.js",
+    "gen:inject": "node tools/gen-inject.cjs"
+  },
+  "dependencies": {
+    "nostr-tools": "^2.10.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

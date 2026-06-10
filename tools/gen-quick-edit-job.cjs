@@ -14,7 +14,7 @@
 // --title/--summary/--image NUR für Metadaten-Korrekturen — ohne sie bleiben
 // alle Tags des Live-Events unverändert erhalten.
 // Ohne --publish: Preview-Modus — holt, patcht, prüft, signiert NICHTS.
-// Relays kommen aus tools/config/relays.json (Sync-Hinweis dort).
+// Relays kommen aus autobot.config.json (relays.longform).
 const fs = require('fs')
 const path = require('path')
 
@@ -28,9 +28,10 @@ if (!dTag || (!patchPath && !specPath)) {
   process.exit(1)
 }
 
+const cfg = require('./lib/load-config.cjs')(path.join(__dirname, '..'))
 const job = {
   dTag,
-  relays: JSON.parse(fs.readFileSync(path.join(__dirname, 'config', 'relays.json'), 'utf8')).longform,
+  relays: cfg.relays.longform,
   replacements: patchPath ? JSON.parse(fs.readFileSync(patchPath, 'utf8')) : null,
   content: specPath ? JSON.parse(fs.readFileSync(specPath, 'utf8')).content : null,
   title: get('--title') || null,
@@ -38,7 +39,11 @@ const job = {
   image: get('--image') || null,
   publish: args.includes('--publish'),
   mustContain: (get('--must') || '').split(',').map(s => s.trim()).filter(Boolean),
-  mustNotContain: (get('--must-not') || 'Voskuil,stoisch,Stoizismus').split(',').map(s => s.trim()).filter(Boolean),
+  // Tabu-Gate: --must-not gewinnt, sonst mustNotDefault aus autobot.config.json
+  mustNotContain: (mn => mn
+    ? mn.split(',').map(s => s.trim()).filter(Boolean)
+    : (cfg.mustNotDefault || [])
+  )(get('--must-not')),
 }
 if (job.replacements && (!Array.isArray(job.replacements) || job.replacements.some(r => !r.search || typeof r.replace !== 'string'))) {
   console.error('patches.json: Array von {search, replace} erwartet'); process.exit(1)

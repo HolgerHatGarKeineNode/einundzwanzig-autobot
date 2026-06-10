@@ -1,7 +1,8 @@
 # einundzwanzig-autobot
 
-Claude-gesteuerte Playwright-MCP-Automation für **https://media.einundzwanzig.space**
-(EINUNDZWANZIG Nostr-Publishing-Plattform): Artikel schreiben, illustrieren (FLUX2 + QA),
+Claude-gesteuerte Playwright-MCP-Automation für eine **Einundzwanzig-Board-Instanz**
+(Nostr-Publishing-Plattform; Ziel = `baseUrl` in `autobot.config.json`, Default:
+`https://media.einundzwanzig.space`): Artikel schreiben, illustrieren (FLUX2 + QA),
 hochladen (Blossom) und als Draft anlegen bzw. — nur auf ausdrückliche Freigabe — live
 publizieren (kind 30023).
 
@@ -10,12 +11,13 @@ publizieren (kind 30023).
 `README.md` (Struktur, Tools, Session-Protokoll) → von dort: `WRITING_RULES.md`,
 `contexts/README.md`, `sessions/README.md`, `docs/CLAUDE_MCP_PLAYBOOK.md`.
 
-## Schwester-Projekt: ~/Code/standup (die Plattform selbst)
+## Plattform-Codebase: standup (falls lokal vorhanden)
 
-`/home/user/Code/standup` ist die **Codebase der Zielplattform** (Vue 3 SPA,
-Milkdown-Editor, nostr-tools; CodeGraph indexiert). **Bei JEDER Frage, wie die App
+Die Zielplattform ist das [Einundzwanzig Board](https://github.com/Buho-Ecosystem/standup)
+(Vue 3 SPA, Milkdown-Editor, nostr-tools). Liegt die Codebase lokal vor
+(z. B. `~/Code/standup`), **bei JEDER Frage, wie die App
 intern funktioniert** (Selektoren, Stores, Editor-Verhalten, Publish-Flow, i18n-Texte),
-dort nachsehen statt raten:
+dort nachsehen statt raten — sonst `docs/` (Plattform-Karten) verwenden:
 
 - Editor: `src/views/dashboard/EditorView.vue`, `src/components/editor/*`,
   `src/composables/useEditor.js` (dTag = `route.params.articleKey`!)
@@ -34,10 +36,15 @@ dort nachsehen statt raten:
    VOR dem Signieren — ein separater Dry-Run-Lauf ist NICHT nötig (bei Unsicherheit:
    `quick-edit` ohne `--publish` = Preview). Nach jedem Publish: Relay-Verifikation
    (kind 30023, `#d`-Filter — quick-edit macht sie automatisch), nie der UI glauben.
-2. **Schreibregeln sind Pflicht** (`WRITING_RULES.md`): stilles Grounding (Quelle/Buch
-   NIE nennen), Haltung nie etikettieren, Text humanisieren.
-3. **Grounding:** `cat contexts/active` → `contexts/<name>/grounding.md` VOLLSTÄNDIG
-   laden, bevor NEU geschrieben wird (Default: `kryptooekonomie`). Für reine
+2. **Schreibregeln sind Pflicht** (`WRITING_RULES.md` **plus, falls vorhanden,
+   `WRITING_RULES.local.md`** — persönliche Regeln des Nutzers, gleiche
+   Verbindlichkeit, gewinnen bei Konflikt): stilles Grounding (Quelle/Buch NIE
+   nennen), Haltung nie etikettieren, Text humanisieren.
+3. **Grounding:** `cat contexts/active` → kann MEHRERE Kontexte listen (ein Name
+   pro Zeile); für JEDEN `contexts/<name>/grounding.md` VOLLSTÄNDIG laden, bevor
+   NEU geschrieben wird — Artikel entstehen aus der vermischten Sicht aller
+   aktiven Groundings. **Ohne mindestens einen aktiven Kontext werden KEINE
+   neuen Artikel geschrieben** (Nutzer bitten, einen anzulegen). Für reine
    Text-Patches an bestehenden (bereits geerdeten) Artikeln reicht gezieltes Laden
    der themenrelevanten Abschnitte. Neue Kontexte aus PDFs: `contexts/README.md`.
 4. **Ein Session-Ordner pro Run:** `sessions/YYYY-MM-DD-<slug>/` — nichts flach ins Root.
@@ -46,15 +53,18 @@ dort nachsehen statt raten:
 
 ## Session-Start (nach Kontext-Reset)
 
-1. `browser_run_code` mit `filename=/home/user/Code/einundzwanzig-autobot/tools/setup-session.run.js`
+1. `browser_run_code` mit `filename=<projektroot>/tools/setup-session.run.js`
    (Blossom-Seed + Bridge + stiller NIP-46-Reconnect + Login). Login-Klick navigiert
    manchmal erst nach dem Messzeitpunkt → bei `ok:false` kurz nachprüfen statt neu einloggen.
-2. Grounding laden (Regel 3), `WRITING_RULES.md` beachten.
+2. Grounding laden (Regel 3), `WRITING_RULES.md` + ggf. `WRITING_RULES.local.md` beachten.
 3. `window.nostr` ist ein Laufzeit-Shim: nach Browser-Neustart/Reload weg → Schritt 1
    wiederholen. Alle Runner haben Signer-Guards und brechen sauber ab.
 
 ## Technik-Eckpunkte
 
+- `autobot.config.local.json` (gitignored, optional) überschreibt Schlüssel aus
+  `autobot.config.json` — jedes Tool, das die Config liest, merged sie (shallow:
+  Schlüssel werden als Ganzes ersetzt). Persönliche Tabu-Wörter: `mustNotDefault`.
 - `tools/*.run.js` = genau EIN `async (page) => {…}`-Ausdruck (MCP-Loader evalt sie);
   Parameter via generierte `tools/jobs/*.inject.js` (`gen-edit-job.cjs`, `gen-upload-job.cjs`,
   `gen-quick-edit-job.cjs`).
@@ -64,10 +74,13 @@ dort nachsehen statt raten:
   generiert ihn, wenn die Editor-Route ohne articleKey geöffnet wird). Vor dem ersten
   Publish eines neuen Slugs: Relay-Check, dass kein fremder Artikel ihn belegt.
   Bestehende Artikel behalten ihren dTag (Replace) — auch wenn er hässlich ist.
-- FLUX2: `/home/user/Apps/FLUX2/.venv/bin/python imagegen/generate.py --manifest …`
-  (Manifest liegt IM Session-Ordner, `output_dir` ebenda).
-- Playwright-MCP global konfiguriert in `~/.claude/playwright-mcp.config.json`
-  (viewport null, Fenster 1900×980) — `--viewport-size` nie setzen.
+- FLUX2 (optional): `<flux2Python aus autobot.config.json> imagegen/generate.py
+  --manifest …` (Manifest liegt IM Session-Ordner, `output_dir` ebenda). Nicht
+  eingerichtet → Generierung überspringen, eigene Bilder des Nutzers verwenden
+  (Setup: `imagegen/INSTALL.md`).
+- Playwright-MCP konfiguriert in `~/.claude/playwright-mcp.config.json`
+  (viewport null, festes Fenster — Einrichtung: `INSTALL.md`) — `--viewport-size`
+  nie setzen.
 - Browser-Dateizugriffe (Screenshots etc.) sind auf die Session-Workspace-Roots
   beschränkt → Claude-Sessions für dieses Projekt IN DIESEM Ordner starten.
 

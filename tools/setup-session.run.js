@@ -3,8 +3,7 @@
 // Stellt bei JEDEM Start deterministisch den vollständigen Zustand her, egal
 // ob das Browser-Profil persistiert oder frisch ist:
 //   1. seedet die Blossom-Server-Konfig in localStorage VOR dem App-Boot
-//      (satellite.earth als Primary — dort ist der Nutzer verifiziert;
-//      nostr.download + primal als kostenlose Mirror-Fallbacks)
+//      (Server aus autobot.config.json — erster Eintrag ist Primary)
 //   2. injiziert die NIP-46-Bridge + reconnect mit PERSISTENTEM Client-Key
 //      (Amber fragt nach der ersten Freigabe nicht mehr → stiller Login)
 //   3. mountet die Login-View neu (hasNostrExtension() läuft nur im setup())
@@ -15,9 +14,14 @@
 // aktuell (node autobot/tools/gen-inject.cjs). Secrets bleiben in Dateien (addScriptTag
 // liest sie server-seitig) — nie im Tool-Aufruf.
 async (page) => {
-  const BASE = 'https://media.einundzwanzig.space'
-  const DIR = '/home/user/Code/einundzwanzig-autobot'
-  const BLOSSOM = ['https://cdn.satellite.earth', 'https://nostr.download', 'https://blossom.primal.net']
+  // Projektroot finden: Claude-Session im Projektordner starten (cwd) oder AUTOBOT_DIR setzen.
+  const fs = require('fs')
+  const DIR = [process.env.AUTOBOT_DIR, process.cwd()].find(d => d && fs.existsSync(d + '/autobot.config.json'))
+  if (!DIR) return { ok: false, stage: 'config', error: 'autobot.config.json nicht gefunden — Claude im Projektordner starten oder AUTOBOT_DIR setzen' }
+  const CFG = JSON.parse(fs.readFileSync(DIR + '/autobot.config.json', 'utf8'))
+  if (fs.existsSync(DIR + '/autobot.config.local.json')) Object.assign(CFG, JSON.parse(fs.readFileSync(DIR + '/autobot.config.local.json', 'utf8')))
+  const BASE = CFG.baseUrl
+  const BLOSSOM = CFG.blossomServers
 
   // 1) Settings VOR App-Boot seeden (idempotent, jede Session).
   await page.addInitScript((servers) => {

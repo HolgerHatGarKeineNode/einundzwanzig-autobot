@@ -5,8 +5,10 @@
 // Amber approval happens on the user's device and is polled separately.
 async (page) => {
   const fs = require('fs')
-  const ENV = '/home/user/Code/einundzwanzig-autobot/.env'
-  const BRIDGE = '/home/user/Code/einundzwanzig-autobot/bridge/bunker-bridge.iife.js'
+  const DIR = [process.env.AUTOBOT_DIR, process.cwd()].find(d => d && fs.existsSync(d + '/autobot.config.json'))
+  if (!DIR) throw new Error('autobot.config.json nicht gefunden — Claude im Projektordner starten oder AUTOBOT_DIR setzen')
+  const ENV = DIR + '/.env'
+  const BRIDGE = DIR + '/bridge/bunker-bridge.iife.js'
 
   const env = fs.readFileSync(ENV, 'utf8')
   const m = env.match(/^NOSTR_BUNKER_URL=(.+)$/m)

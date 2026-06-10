@@ -11,7 +11,10 @@
 // Rückgabe: [{ file, ok, url, hash, size, status?, error? }].
 // NOTE: Datei MUSS genau EIN `async (page) => {...}`-Ausdruck bleiben.
 async (page) => {
-  await page.addScriptTag({ path: '/home/user/Code/einundzwanzig-autobot/tools/jobs/upload-job.inject.js' })
+  const fs = require('fs')
+  const DIR = [process.env.AUTOBOT_DIR, process.cwd()].find(d => d && fs.existsSync(d + '/autobot.config.json'))
+  if (!DIR) return { ok: false, stage: 'config', error: 'autobot.config.json nicht gefunden — Claude im Projektordner starten oder AUTOBOT_DIR setzen' }
+  await page.addScriptTag({ path: DIR + '/tools/jobs/upload-job.inject.js' })
   const job = await page.evaluate(() => window.__uploadJob)
   if (!job || !job.files || !job.files.length) return { ok: false, stage: 'params', error: 'upload-job.inject.js fehlt/leer — erst gen-upload-job.cjs ausführen' }
   const hasSigner = await page.evaluate(() => !!window.nostr)

@@ -37,7 +37,7 @@ Bitcoin-Logo*, off-prompt) **automatisch re-generiert**, bis sie bestehen.
 - **Prompt-Schärfung:** Wiederkehrende Fehlerklassen über die Prompt-Hygiene in `QA_RUBRIC.md`
   abstellen (z. B. Finanz-Metaphern objekthaft statt über Banknoten/Text).
 
-## Verdikt-Beispiel (Self-Custody-Lauf)
+## Verdikt-Beispiel
 
 7/8 PASS beim ersten Durchgang. `sec3` (Gegenparteirisiko) FAIL: Dollar-Schein mit ₿-Logo +
 Fake-Banknoten-Text → `promptFix`: objekthafte Metapher (zerberstendes Kettenglied im Tresor),

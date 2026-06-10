@@ -23,7 +23,9 @@
 //   setup-session.run.js ausführen. Dieser Runner prüft das und bricht sauber ab.
 // - Datei MUSS genau EIN `async (page) => {…}`-Ausdruck bleiben.
 async (page) => {
-  const DIR = '/home/user/Code/einundzwanzig-autobot'
+  const fs = require('fs')
+  const DIR = [process.env.AUTOBOT_DIR, process.cwd()].find(d => d && fs.existsSync(d + '/autobot.config.json'))
+  if (!DIR) return { ok: false, stage: 'config', error: 'autobot.config.json nicht gefunden — Claude im Projektordner starten oder AUTOBOT_DIR setzen' }
   await page.addScriptTag({ path: DIR + '/tools/jobs/edit-job.inject.js' })
 
   const pre = await page.evaluate(() => ({

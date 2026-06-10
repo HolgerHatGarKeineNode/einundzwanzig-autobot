@@ -2,19 +2,31 @@
 .env
 bridge/connect.inject.js
 
-# Generiertes Bundle (aus bridge/bunker-bridge.entry.js via esbuild reproduzierbar)
+# Persönliche Overlays — jeder Nutzer trifft seine eigenen Entscheidungen
+autobot.config.local.json
+WRITING_RULES.local.md
+
+# Generiertes Bundle (npm run build:bridge)
 bridge/bunker-bridge.iife.js
+
+# Node
+node_modules/
 
 # Ephemere Job-Parameter (pro Lauf neu erzeugt)
 tools/jobs/*.inject.js
 
-# Wissens-Kontexte: Quell-PDFs/Volltexte (Urheberrecht, groß) — lokal halten
+# Wissens-Kontexte: Quell-PDFs/Volltexte (Urheberrecht, groß) — lokal halten.
+# Auch `active` ist lokal: jeder User wählt seine eigenen Kontexte.
 contexts/*/
+contexts/active
 !contexts/README.md
 
 # Session-Artefakte (Bilder, Logs, generierte Specs) — lokal halten
 sessions/*/
 !sessions/README.md
+
+# FLUX2-Umgebung (imagegen/INSTALL.md) — auch als Symlink
+imagegen/.venv
 
 # Sonstiges
 __pycache__/

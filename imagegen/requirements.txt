@@ -1,0 +1,10 @@
+# FLUX.2 [klein] 4B via Diffusers — Umgebung für generate.py (siehe INSTALL.md).
+# Known-good Stand: Juni 2026. Flux2KleinPipeline braucht diffusers >= 0.39 —
+# falls deine diffusers-Version die Klasse noch nicht hat:
+#   pip install git+https://github.com/huggingface/diffusers
+torch>=2.8
+diffusers>=0.39
+transformers>=4.56
+accelerate>=1.12
+safetensors>=0.4.5
+pillow
