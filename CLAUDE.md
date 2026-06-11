@@ -51,7 +51,8 @@ dort nachsehen statt raten — sonst `docs/` (Plattform-Karten) verwenden:
 5. **Bild-QA ist Pflicht** für jedes generierte Bild (`imagegen/QA_RUBRIC.md`, max 3 Re-Rolls).
 6. **Secrets** (`.env`, `bridge/connect.inject.js`) nie loggen, nie committen.
 7. **Audio per Default.** Beim Erzeugen eines Artikel-Events standardmäßig eine
-   Audioversion generieren (`tools/tts-generate.cjs`, Stimme `Algieba`), via
+   Audioversion generieren (`tools/tts-generate.cjs`, Default: Grok `rex` — ein
+   Request für den ganzen Artikel, daher keine Stimmwechsel), via
    `tools/blossom-upload-node.cjs` hochladen und als zwei Hör-Boxen einbetten
    (feste Vorlage: `docs/AUDIO_EMBED.md` — oben Hinweis-Box, unten nach Trennlinie).
    Übersprungen NUR ohne `OPENROUTER_API_KEY` oder auf ausdrücklichen Wunsch des
