@@ -7,6 +7,16 @@ Severity `block` zutrifft (oder ≥2 `minor`). FAIL → re-generieren (neuer See
 geschärfter Prompt), dann erneut prüfen. Max. Versuche pro Bild: **3** (danach das beste
 behalten und melden).
 
+## Pflicht-Zählschritt: Hände & Finger
+
+Bevor das Verdikt gefällt wird, bei JEDEM Bild mit sichtbaren Händen (auch
+Teilansichten!) **explizit zählen**: Wie viele Hände? Wie viele Finger pro
+Hand? Das Ergebnis gehört als Satz in die QA-Notiz (z. B. „2 Hände sichtbar,
+links 5 Finger, rechts 5 Finger"). >5 Finger, verschmolzene oder geknickte
+Finger = Kategorie 1, block. Wer nicht zählt, übersieht den sechsten Finger —
+passiert selbst bei aufmerksamem Hinsehen (Juni 2026: 6 Finger erst vom
+Nutzer entdeckt, nachdem das Bild QA „bestanden" hatte).
+
 ## Defekt-Kategorien
 
 | # | Kategorie | Beispiele | Severity |
