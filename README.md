@@ -16,6 +16,7 @@ Live-Publish nur auf ausdrückliche Freigabe.
 | Mindestens **ein Wissens-Kontext** (Buch-PDF o. Textdatei) | ✅ | ohne Grounding schreibt der Bot nicht |
 | poppler-utils (`pdftotext`) | optional | Kontexte aus PDFs extrahieren |
 | NVIDIA-GPU + FLUX.2 | optional | lokale Bildgenerierung — sonst eigene Bilder nutzen |
+| [OpenRouter](https://openrouter.ai)-Account + `ffmpeg` | optional | Artikel-Vertonung (Audio-MP3 via Gemini TTS) — API-Key aus [openrouter.ai/keys](https://openrouter.ai/keys) |
 
 Details zu jedem Punkt: **[INSTALL.md](INSTALL.md)**.
 
@@ -52,7 +53,7 @@ Live geht ein Artikel erst, wenn du es ausdrücklich freigibst.
 
 | Datei | Inhalt |
 |---|---|
-| `.env` | **Secrets**: `NOSTR_BUNKER_URL`, `NOSTR_CLIENT_SK` — nie committen |
+| `.env` | **Secrets**: `NOSTR_BUNKER_URL`, `NOSTR_CLIENT_SK`, optional `OPENROUTER_API_KEY` (für Audio-Vertonung, Key aus [openrouter.ai/keys](https://openrouter.ai/keys)) — nie committen |
 | `autobot.config.json` | Alles Nicht-Geheime: `baseUrl`, Blossom-Server, Relays, FLUX2-Python-Pfad, `mustNotDefault` (Tabu-Wörter-Gate) |
 | `autobot.config.local.json` | Optional, gitignored: **deine persönlichen Overrides** — überschreibt Schlüssel aus `autobot.config.json` (z. B. eigene Tabu-Wörter) |
 | `contexts/active` | Deine aktiven Wissens-Kontexte (ein Name pro Zeile, lokal) |
@@ -90,7 +91,22 @@ Live geht ein Artikel erst, wenn du es ausdrücklich freigibst.
 | `tools/edit-article.run.js` | browser_run_code (filename) | Artikel anlegen/editieren über Edit-Route, Checks, Save locally, optional Live-Publish. Enthält alle Gotcha-Absicherungen. Für NEUE Artikel. |
 | `tools/gen-quick-edit-job.cjs` | `node … --dtag <d> (--patch <patches.json> \| --spec <spec.json>) [--publish] [--must csv] [--must-not csv] [--title/--summary/--image …]` | Quick-Edit-Job schreiben (patches.json = `[{search, replace}]`, search muss exakt 1× matchen). |
 | `tools/quick-edit.run.js` | browser_run_code (filename) | **SCHNELLSTER Weg für Text-Updates bestehender Artikel:** patcht das Live-Event direkt (Relay-Fetch → Patch → Gates → signEvent → Backend-POST + Relay-Broadcast → Relay-Verifikation) — EIN Lauf, kein Editor (`publish=false` = Preview). |
+| `tools/tts-generate.cjs` | `node … --in <article.md> --out <audio.mp3> [--voice Algieba] [--title "…"] [--sample] [--dry]` | **Artikel-Vertonung** via OpenRouter (Gemini TTS) → komprimiertes mobiles MP3 (mono, 48 kbps, loudnorm). Reines Node, kein Browser. `--dry` = nur Vorlese-Text prüfen, `--sample` = kurze Hörprobe. Braucht `OPENROUTER_API_KEY` in `.env` + ffmpeg. |
+| `tools/blossom-upload-node.cjs` | `node … --files <pfad[,…]> [--server url]` | **Headless** BUD-02-Upload (kein Browser): signiert das kind-24242-Auth-Event direkt via NIP-46-Bunker (gleicher Client-Key wie die Bridge → stille Freigabe). Für MP3s u. a. Nicht-Bild-Blobs. Rückgabe `[{file,url,hash}]`. |
 | `tools/setup.cjs` | `npm run setup` | Erst-Einrichtung & Gesundheitscheck (idempotent). |
+
+## Audio-Vertonung (optional)
+
+**Voraussetzung:** `OPENROUTER_API_KEY` in `.env` eintragen (Key aus
+[openrouter.ai/keys](https://openrouter.ai/keys)) + `ffmpeg` installiert. Ohne den
+Key wird die Audio-Funktion übersprungen. Kosten ~0,03 $/Audio-Minute (Gemini 3.1).
+
+Artikel als MP3 vorlesen lassen und als Hör-Link einbetten:
+
+1. **Stimme wählen** (Hörproben): `node tools/tts-generate.cjs --in <session>/article-illustrated.md --title "…" --voice Charon --sample --out <session>/audio/samples/probe-Charon.mp3` (ruhig/seriös männlich: `Charon`, `Rasalgethi`, `Iapetus`, `Algieba`, `Sadaltager`; Liste: 30 Gemini-Stimmen).
+2. **Vollvertonung:** dasselbe ohne `--sample` → `<session>/audio/<slug>.mp3` (Kosten ~0,03 $/Audio-Minute bei Gemini 3.1).
+3. **Hochladen:** `node tools/blossom-upload-node.cjs --files <session>/audio/<slug>.mp3` → Blossom-URL.
+4. **Einbetten:** als Markdown-Link oben im Artikel (`🎧 **[Diesen Artikel anhören (m:ss)](<url>)**`) — rendert auf dem Board (`marked`) und in allen Nostr-Clients. Dann normal über `quick-edit`/`edit-article` publizieren.
 
 ## Dry-Run-Sicherheit
 
