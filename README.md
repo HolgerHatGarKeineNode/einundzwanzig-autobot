@@ -93,20 +93,26 @@ Live geht ein Artikel erst, wenn du es ausdrücklich freigibst.
 | `tools/quick-edit.run.js` | browser_run_code (filename) | **SCHNELLSTER Weg für Text-Updates bestehender Artikel:** patcht das Live-Event direkt (Relay-Fetch → Patch → Gates → signEvent → Backend-POST + Relay-Broadcast → Relay-Verifikation) — EIN Lauf, kein Editor (`publish=false` = Preview). |
 | `tools/tts-generate.cjs` | `node … --in <article.md> --out <audio.mp3> [--voice Algieba] [--title "…"] [--sample] [--dry]` | **Artikel-Vertonung** via OpenRouter (Gemini TTS) → komprimiertes mobiles MP3 (mono, 48 kbps, loudnorm). Reines Node, kein Browser. `--dry` = nur Vorlese-Text prüfen, `--sample` = kurze Hörprobe. Braucht `OPENROUTER_API_KEY` in `.env` + ffmpeg. |
 | `tools/blossom-upload-node.cjs` | `node … --files <pfad[,…]> [--server url]` | **Headless** BUD-02-Upload (kein Browser): signiert das kind-24242-Auth-Event direkt via NIP-46-Bunker (gleicher Client-Key wie die Bridge → stille Freigabe). Für MP3s u. a. Nicht-Bild-Blobs. Rückgabe `[{file,url,hash}]`. |
+| `tools/quick-edit-node.cjs` | `node …` (Preview) / `node … --go` (LIVE) | **Headless** Quick-Edit (kein Browser): funktionsgleicher Zwilling zu `quick-edit.run.js` für Umgebungen ohne lauffähige Playwright-Runner. Liest denselben Job (`gen-quick-edit-job.cjs`), gleiche Gates, signiert via NIP-46-Bunker. Ohne `--go` nur Preview. |
 | `tools/setup.cjs` | `npm run setup` | Erst-Einrichtung & Gesundheitscheck (idempotent). |
 
 ## Audio-Vertonung (optional)
 
-**Voraussetzung:** `OPENROUTER_API_KEY` in `.env` eintragen (Key aus
-[openrouter.ai/keys](https://openrouter.ai/keys)) + `ffmpeg` installiert. Ohne den
-Key wird die Audio-Funktion übersprungen. Kosten ~0,03 $/Audio-Minute (Gemini 3.1).
+**Default:** Beim Erzeugen eines Artikel-Events wird **standardmäßig eine Audioversion
+generiert** und als Hör-Link eingebettet (Stimme: `Algieba`). Nur übersprungen, wenn
+kein `OPENROUTER_API_KEY` gesetzt ist oder der Nutzer es ausdrücklich abwählt.
 
-Artikel als MP3 vorlesen lassen und als Hör-Link einbetten:
+**Voraussetzung:** `OPENROUTER_API_KEY` in `.env` (Key aus
+[openrouter.ai/keys](https://openrouter.ai/keys)) + `ffmpeg`. Kosten ~0,03 $/Audio-Minute (Gemini 3.1).
 
-1. **Stimme wählen** (Hörproben): `node tools/tts-generate.cjs --in <session>/article-illustrated.md --title "…" --voice Charon --sample --out <session>/audio/samples/probe-Charon.mp3` (ruhig/seriös männlich: `Charon`, `Rasalgethi`, `Iapetus`, `Algieba`, `Sadaltager`; Liste: 30 Gemini-Stimmen).
-2. **Vollvertonung:** dasselbe ohne `--sample` → `<session>/audio/<slug>.mp3` (Kosten ~0,03 $/Audio-Minute bei Gemini 3.1).
-3. **Hochladen:** `node tools/blossom-upload-node.cjs --files <session>/audio/<slug>.mp3` → Blossom-URL.
-4. **Einbetten:** als Markdown-Link oben im Artikel (`🎧 **[Diesen Artikel anhören (m:ss)](<url>)**`) — rendert auf dem Board (`marked`) und in allen Nostr-Clients. Dann normal über `quick-edit`/`edit-article` publizieren.
+1. **Vollvertonung:** `node tools/tts-generate.cjs --in <session>/article-illustrated.md --title "…" --voice Algieba --out <session>/audio/<slug>.mp3` (Stimme wechseln/vorhören: `--sample` + andere Namen; ruhig/seriös männlich: `Charon`, `Rasalgethi`, `Iapetus`, `Algieba`, `Sadaltager`; 30 Gemini-Stimmen).
+2. **Hochladen:** `node tools/blossom-upload-node.cjs --files <session>/audio/<slug>.mp3` → Blossom-URL.
+3. **Einbetten:** zwei Blockquote-Boxen (oben Hinweis-Box, unten nach Trennlinie) nach der
+   festen Vorlage **[docs/AUDIO_EMBED.md](docs/AUDIO_EMBED.md)** — rendert auf dem Board
+   (`marked`) und in allen Nostr-Clients.
+4. **Publizieren:** neuer Artikel → Boxen in `article-spec.json` → `edit-article`; bestehender
+   Live-Artikel → `audio-patches.json` → `gen-quick-edit-job.cjs --patch …` → `quick-edit`
+   (bzw. headless `quick-edit-node.cjs`).
 
 ## Dry-Run-Sicherheit
 
