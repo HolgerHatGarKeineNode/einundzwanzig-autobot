@@ -94,6 +94,7 @@ Live geht ein Artikel erst, wenn du es ausdrücklich freigibst.
 | `tools/tts-generate.cjs` | `node … --in <article.md> --out <audio.mp3> [--voice Algieba] [--title "…"] [--sample] [--dry]` | **Artikel-Vertonung** via OpenRouter (Gemini TTS) → komprimiertes mobiles MP3 (mono, 48 kbps, loudnorm). Reines Node, kein Browser. `--dry` = nur Vorlese-Text prüfen, `--sample` = kurze Hörprobe. Braucht `OPENROUTER_API_KEY` in `.env` + ffmpeg. |
 | `tools/blossom-upload-node.cjs` | `node … --files <pfad[,…]> [--server url]` | **Headless** BUD-02-Upload (kein Browser): signiert das kind-24242-Auth-Event direkt via NIP-46-Bunker (gleicher Client-Key wie die Bridge → stille Freigabe). Für MP3s u. a. Nicht-Bild-Blobs. Rückgabe `[{file,url,hash}]`. |
 | `tools/quick-edit-node.cjs` | `node …` (Preview) / `node … --go` (LIVE) | **Headless** Quick-Edit (kein Browser): funktionsgleicher Zwilling zu `quick-edit.run.js` für Umgebungen ohne lauffähige Playwright-Runner. Liest denselben Job (`gen-quick-edit-job.cjs`), gleiche Gates, signiert via NIP-46-Bunker. Ohne `--go` nur Preview. |
+| `tools/announce-node.cjs` | `node … --dtag <d> --site <siteSlug> --text-file <datei>` (Preview) / `… --go` (LIVE) | **Headless Artikel-Ankündigung** als Nostr-Note (kind 1): Text aus Datei + Leerzeile + öffentlicher Link `/s/<site>/<dTag>`, plus a-Tag (`30023:<pubkey>:<dTag>`) zur Artikel-Zuordnung. Gates vor dem Signieren: Artikel existiert auf Relays, URL liefert 200, Tabu-Gate, Text ≤ 600 Zeichen ohne eigene URL; bei `--go` zusätzlich Signer=Artikel-Autor + Relay-Verifikation. Ohne `--go` nur Preview. |
 | `tools/setup.cjs` | `npm run setup` | Erst-Einrichtung & Gesundheitscheck (idempotent). |
 
 ## Audio-Vertonung (optional)
@@ -117,8 +118,9 @@ kein `OPENROUTER_API_KEY` gesetzt ist oder der Nutzer es ausdrücklich abwählt.
 ## Dry-Run-Sicherheit
 
 Live wird ein Nostr-Event **nur** durch den Publish-Schritt erzeugt
-(`edit-article.run.js`/`quick-edit.run.js` nur mit `--publish` im Job — und das
-nur auf ausdrückliche menschliche Freigabe in derselben Sitzung). Alles andere
+(`edit-article.run.js`/`quick-edit.run.js` nur mit `--publish` im Job,
+`announce-node.cjs` nur mit `--go` — und das jeweils nur auf ausdrückliche
+menschliche Freigabe in derselben Sitzung). Alles andere
 (Editor füllen, Save locally, Preview, Blossom-Uploads) ist ungefährlich bzw.
 ersetzt nichts Öffentliches. Die must/must-not/Sanity-Gates laufen zwingend VOR
 dem Signieren; nach jedem Publish folgt eine Relay-Verifikation.

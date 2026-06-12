@@ -32,7 +32,8 @@ dort nachsehen statt raten — sonst `docs/` (Plattform-Karten) verwenden:
 1. **Gates vor jedem Publish.** Live publizieren NUR `tools/edit-article.run.js` (neue
    Artikel) bzw. `tools/quick-edit.run.js` (Text-Updates bestehender Artikel) mit
    `--publish` im Job — und das nur nach ausdrücklicher menschlicher Freigabe in
-   derselben Sitzung. Die must/must-not/Sanity-Gates laufen in beiden Runnern zwingend
+   derselben Sitzung. Gleiches gilt für Ankündigungs-Notes (kind 1) via
+   `tools/announce-node.cjs`: ohne `--go` = Preview, `--go` nur nach Freigabe. Die must/must-not/Sanity-Gates laufen in beiden Runnern zwingend
    VOR dem Signieren — ein separater Dry-Run-Lauf ist NICHT nötig (bei Unsicherheit:
    `quick-edit` ohne `--publish` = Preview). Nach jedem Publish: Relay-Verifikation
    (kind 30023, `#d`-Filter — quick-edit macht sie automatisch), nie der UI glauben.
