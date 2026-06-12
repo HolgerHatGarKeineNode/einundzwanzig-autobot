@@ -3,18 +3,26 @@
 //   node tools/announce-node.cjs --dtag <dTag> --site <siteSlug> --text-file <datei>   # Preview
 //   node tools/announce-node.cjs --dtag … --site … --text-file … --go                  # LIVE!
 //
+// Relay-Strategie (Gossip/NIP-65):
+//   Beim Publish wird kind 10002 des Artikel-Autors von Bootstrap-Relays geladen.
+//   Outbox-Relays (r-Tags ohne Marker oder marker="write") werden als Broadcast-Ziel
+//   verwendet. Fallback: cfg.relays.longform, falls kein kind 10002 vorhanden.
+//   Longform-Relays werden weiterhin für Relay-Gates (Artikel-Nachweis) genutzt.
+//
 // Baut einen kurzen Ankündigungs-Post für einen BESTEHENDEN Longform-Artikel:
 //   <Text aus --text-file>
 //   <Leerzeile>
 //   <baseUrl>/s/<site>/<dTag>
-// plus a-Tag (NIP-23-Referenz "30023:<pubkey>:<dTag>"), damit Nostr-Clients den
-// Post dem Artikel zuordnen können. KEINE Hashtags — bewusst schlicht.
+//   [<Leerzeile>🎧 Wer lieber hört: <audio-url>]   ← optional, via --audio-url
+// Kein a-Tag — a-Tags auf kind 30023 lassen Clients den Post als Kommentar anzeigen.
+// Der Artikel-URL im content ist die einzige Referenz. KEINE Hashtags — bewusst schlicht.
 //
 // Gates (laufen IMMER, vor jedem Signieren):
 //   - Artikel existiert auf den Relays (kind 30023, #d) → Titel + Autor-Pubkey
 //   - öffentliche URL antwortet mit HTTP 200
 //   - Tabu-Gate (mustNotDefault aus autobot.config[.local].json)
 //   - Text nicht leer, ≤ 600 Zeichen, enthält selbst KEINE URL (Link kommt ans Ende)
+//   - --audio-url muss https?://-URL sein (wird nicht auf Erreichbarkeit geprüft)
 // Preview ist der eingebaute Dry-Run: ohne --go wird NICHTS signiert/gesendet.
 // Bei --go zusätzlich: Signer-Pubkey muss dem Artikel-Autor entsprechen (nur
 // eigene Artikel ankündigen), danach Relay-Verifikation über die Event-ID.
@@ -49,8 +57,13 @@ const GO = args.includes('--go')
 const dTag = get('--dtag')
 const site = get('--site')
 const textFile = get('--text-file')
+const audioUrl = get('--audio-url')
 if (!dTag || !site || !textFile) {
-  console.error('usage: --dtag <dTag> --site <siteSlug> --text-file <datei> [--go]')
+  console.error('usage: --dtag <dTag> --site <siteSlug> --text-file <datei> [--audio-url <url>] [--go]')
+  process.exit(1)
+}
+if (audioUrl && !/^https?:\/\//i.test(audioUrl)) {
+  console.error('GATE FAIL: --audio-url muss eine https?://-URL sein')
   process.exit(1)
 }
 
@@ -83,9 +96,10 @@ const mustNot = cfg.mustNotDefault || []
   if (http !== 200) { console.error('GATE FAIL: URL antwortet nicht mit 200: ' + url + ' → ' + http); process.exit(1) }
 
   // 4) Event bauen (unsigniert).
-  const content = text + '\n\n' + url
+  // Kein a-Tag: a-Tags auf kind 30023 werden von Clients als Kommentar/Reply interpretiert.
+  // Der Artikel-Link im content reicht als Referenz.
+  const content = text + '\n\n' + url + (audioUrl ? '\n\n🎧 Wer lieber hört: ' + audioUrl : '')
   const tags = [
-    ['a', '30023:' + article.pubkey + ':' + dTag, relays[0]],
     ['client', 'EINUNDZWANZIG HUB'],
   ]
 
@@ -93,7 +107,7 @@ const mustNot = cfg.mustNotDefault || []
   if (!GO) {
     console.log(JSON.stringify({
       ok: true, stage: 'preview', dTag, articleTitle: title, articleAuthor: article.pubkey.slice(0, 12) + '…',
-      url, http, gates: { textLen: text.length, forbidden, hasUrl }, kind: 1, tags, content,
+      url, audioUrl: audioUrl || null, http, gates: { textLen: text.length, forbidden, hasUrl }, kind: 1, tags, content,
     }, null, 2))
     pool.close(relays); setTimeout(() => process.exit(0), 200); return
   }
@@ -111,21 +125,38 @@ const mustNot = cfg.mustNotDefault || []
   const pubkey = await signer.getPublicKey()
   if (pubkey !== article.pubkey) { console.error('GATE FAIL: Signer ' + pubkey.slice(0, 12) + '… ist nicht der Artikel-Autor'); process.exit(1) }
 
+  // NIP-65: Outbox-Relays des Autors laden (Gossip-Strategie).
+  const BOOTSTRAP = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://nostr.einundzwanzig.space', 'wss://relay.nostr.band', 'wss://purplepag.es']
+  console.error('▶ Lade NIP-65 Outbox-Relays (kind 10002)…')
+  const relayListEvs = await pool.querySync(BOOTSTRAP, { kinds: [10002], authors: [pubkey], limit: 1 }, { maxWait: 8000 })
+  relayListEvs.sort((a, b) => b.created_at - a.created_at)
+  let broadcastRelays
+  if (relayListEvs.length) {
+    broadcastRelays = relayListEvs[0].tags
+      .filter(t => t[0] === 'r' && (!t[2] || t[2] === 'write'))
+      .map(t => t[1])
+    console.error('Outbox-Relays:', broadcastRelays.join(', '))
+  } else {
+    console.error('kein kind 10002 gefunden — Fallback auf longform-Relays')
+    broadcastRelays = relays
+  }
+
   const signed = await signer.signEvent({ kind: 1, created_at: Math.floor(Date.now() / 1000), tags, content })
-  const sends = await Promise.allSettled(pool.publish(relays, signed))
+  const sends = await Promise.allSettled(pool.publish(broadcastRelays, signed))
   const accepted = []
-  sends.forEach((s, i) => { if (s.status === 'fulfilled') accepted.push(relays[i]) })
+  sends.forEach((s, i) => { if (s.status === 'fulfilled') accepted.push(broadcastRelays[i]) })
 
   // 7) Relay-Verifikation über die Event-ID.
   await new Promise(r => setTimeout(r, 800))
-  const verify = await pool.querySync((accepted.length ? accepted : relays).slice(0, 4), { ids: [signed.id] }, { maxWait: 5000 })
+  const verify = await pool.querySync((accepted.length ? accepted : broadcastRelays).slice(0, 4), { ids: [signed.id] }, { maxWait: 5000 })
   const verified = verify.some(e => e.id === signed.id)
 
   console.log(JSON.stringify({
     ok: verified, stage: verified ? 'published+verified' : 'published-unverified',
     eventId: signed.id, url, content,
-    relaysAccepted: accepted, relaysFailed: sends.map((s, i) => s.status === 'rejected' ? relays[i] : null).filter(Boolean),
+    outboxRelays: broadcastRelays,
+    relaysAccepted: accepted, relaysFailed: sends.map((s, i) => s.status === 'rejected' ? broadcastRelays[i] : null).filter(Boolean),
   }, null, 2))
-  pool.close(relays)
+  pool.close([...relays, ...BOOTSTRAP, ...broadcastRelays])
   setTimeout(() => process.exit(verified ? 0 : 1), 200)
 })()
