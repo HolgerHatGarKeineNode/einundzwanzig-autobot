@@ -33,6 +33,8 @@ const path = require('path')
 const ROOT = path.join(__dirname, '..')
 const { SimplePool, useWebSocketImplementation } = require('nostr-tools/pool')
 const { BunkerSigner, parseBunkerInput } = require('nostr-tools/nip46')
+const nip19 = require('nostr-tools/nip19')
+const recordPublish = require('./lib/record-publish.cjs')
 if (typeof WebSocket !== 'undefined') useWebSocketImplementation(WebSocket)
 
 function loadEnv() {
@@ -58,8 +60,9 @@ const dTag = get('--dtag')
 const site = get('--site')
 const textFile = get('--text-file')
 const audioUrl = get('--audio-url')
+const sessionDir = get('--session')
 if (!dTag || !site || !textFile) {
-  console.error('usage: --dtag <dTag> --site <siteSlug> --text-file <datei> [--audio-url <url>] [--go]')
+  console.error('usage: --dtag <dTag> --site <siteSlug> --text-file <datei> [--audio-url <url>] [--session <dir>] [--go]')
   process.exit(1)
 }
 if (audioUrl && !/^https?:\/\//i.test(audioUrl)) {
@@ -151,9 +154,21 @@ const mustNot = cfg.mustNotDefault || []
   const verify = await pool.querySync((accepted.length ? accepted : broadcastRelays).slice(0, 4), { ids: [signed.id] }, { maxWait: 5000 })
   const verified = verify.some(e => e.id === signed.id)
 
+  // 8) Publish-Log der Session: Note + Artikel-Referenzen festhalten (damit ein
+  //    späterer Lauf dTag/site/eventId nicht erneut auf den Relays suchen muss).
+  let nevent = null, naddr = null
+  try { nevent = nip19.neventEncode({ id: signed.id, author: pubkey, kind: 1, relays: accepted.slice(0, 3) }) } catch (e) { /* best-effort */ }
+  try { naddr = nip19.naddrEncode({ identifier: dTag, pubkey: article.pubkey, kind: 30023, relays: relays.slice(0, 3) }) } catch (e) { /* best-effort */ }
+  if (verified) recordPublish(sessionDir, {
+    ts: Math.floor(Date.now() / 1000), type: 'announce', kind: 1,
+    noteEventId: signed.id, nevent,
+    dTag, site, url, audioUrl: audioUrl || null,
+    articleEventId: article.id, articleNaddr: naddr, articleTitle: title, articleAuthor: pubkey,
+  })
+
   console.log(JSON.stringify({
     ok: verified, stage: verified ? 'published+verified' : 'published-unverified',
-    eventId: signed.id, url, content,
+    eventId: signed.id, nevent, url, content,
     outboxRelays: broadcastRelays,
     relaysAccepted: accepted, relaysFailed: sends.map((s, i) => s.status === 'rejected' ? broadcastRelays[i] : null).filter(Boolean),
   }, null, 2))

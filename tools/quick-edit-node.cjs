@@ -19,6 +19,8 @@ const path = require('path')
 const ROOT = path.join(__dirname, '..')
 const { SimplePool, useWebSocketImplementation } = require('nostr-tools/pool')
 const { BunkerSigner, parseBunkerInput } = require('nostr-tools/nip46')
+const nip19 = require('nostr-tools/nip19')
+const recordPublish = require('./lib/record-publish.cjs')
 if (typeof WebSocket !== 'undefined') useWebSocketImplementation(WebSocket)
 
 function loadEnv() {
@@ -38,6 +40,9 @@ function hexToBytes(hex) {
 }
 
 const GO = process.argv.includes('--go')
+const argGet = (flag) => { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : undefined }
+const sessionDir = argGet('--session')
+const siteSlug = argGet('--site') || null
 const cfg = require('./lib/load-config.cjs')(ROOT)
 const BASE = cfg.baseUrl
 
@@ -144,9 +149,20 @@ const WANT_PUBLISH = !!job.publish && GO
   const verify = await pool.querySync((accepted.length ? accepted : relays).slice(0, 4), filter, { maxWait: 5000 })
   const verified = verify.some(e => e.id === signed.id)
 
+  // Publish-Log der Session: Event-ID + Identifier festhalten (späterer Announce
+  // muss dTag/eventId dann nicht erneut auf den Relays suchen).
+  let naddr = null
+  try { naddr = nip19.naddrEncode({ identifier: job.dTag, pubkey: baseEv.pubkey, kind: 30023, relays: relays.slice(0, 3) }) } catch (e) { /* best-effort */ }
+  const url = siteSlug ? BASE.replace(/\/+$/, '') + '/s/' + encodeURIComponent(siteSlug) + '/' + encodeURIComponent(job.dTag) : null
+  if (verified) recordPublish(sessionDir, {
+    ts: now, type: 'article', kind: 30023,
+    eventId: signed.id, naddr, dTag: job.dTag, site: siteSlug, url,
+    title: job.title || (tags.find(t => t[0] === 'title') || [])[1] || null,
+  })
+
   console.log(JSON.stringify({
     ok: verified, stage: verified ? 'published+verified' : 'published-unverified',
-    eventId: signed.id, createdAt: now, gate, applied, backend,
+    eventId: signed.id, naddr, createdAt: now, gate, applied, backend,
     relaysAccepted: accepted, relaysFailed: sends.map((s, i) => s.status === 'rejected' ? relays[i] : null).filter(Boolean),
   }, null, 2))
   pool.close(relays)
