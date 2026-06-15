@@ -20,8 +20,15 @@ Usage:
   generate.py --manifest m.json --only sec3     # re-roll just sec3 (NEW random seed)
   generate.py --manifest m.json --only sec3 --seed 42   # re-roll sec3 with a fixed seed
 
-Outputs <output_dir>/<id>.png and merges <output_dir>/results.json
-(list of {id, path, seed, width, height, prompt}).
+Outputs <output_dir>/<id>.webp (web-optimised WebP, always) and merges
+<output_dir>/results.json (list of {id, path, seed, width, height, prompt}).
+
+WebP compression runs automatically on every generated image. Tune it via the
+manifest's defaults.webp block (all optional):
+  "defaults": { "webp": { "quality": 90, "method": 6, "lossless": false } }
+quality 1-100 (lossy, default 90 = visually lossless for web), method 0-6
+(compression effort, default 6 = smallest file), lossless true for an exact
+copy. Per-job override via job["webp"].
 """
 from __future__ import annotations
 import argparse, json, random, time
@@ -66,6 +73,22 @@ def build_prompt(prompt: str, avoid) -> str:
     if not items:
         return prompt
     return f"{prompt}. Important: the image must NOT contain: {items}."
+
+
+def save_webp(img, path, cfg):
+    """Always save as web-optimised WebP. cfg = {quality, method, lossless}.
+    quality (lossy, default 90) is visually lossless for photographic content
+    while shrinking ~4-8x vs PNG; method 6 = maximum compression effort."""
+    quality = int(cfg.get("quality", 90))
+    method = int(cfg.get("method", 6))
+    lossless = bool(cfg.get("lossless", False))
+    kwargs = {"format": "WEBP", "method": method}
+    if lossless:
+        kwargs["lossless"] = True
+        kwargs["quality"] = 100
+    else:
+        kwargs["quality"] = quality
+    img.save(path, **kwargs)
 
 
 def generate_one(pipe, prompt, width, height, seed, steps, guidance):
@@ -117,16 +140,20 @@ def main() -> None:
         # job override > manifest defaults > global DEFAULT_AVOID; "avoid": [] opts out.
         avoid = j.get("avoid", defaults.get("avoid", DEFAULT_AVOID))
         effective_prompt = build_prompt(j["prompt"], avoid)
+        # WebP config: job override > manifest defaults > built-in (q90/method6 lossy).
+        webp_cfg = j.get("webp", defaults.get("webp", {}))
         t0 = time.time()
         img = generate_one(pipe, effective_prompt, w, h, seed, steps, guidance)
-        path = out_dir / f'{j["id"]}.png'
-        img.save(path)
+        path = out_dir / f'{j["id"]}.webp'
+        save_webp(img, path, webp_cfg)
+        kb = path.stat().st_size / 1024
         results[j["id"]] = {
             "id": j["id"], "path": str(path), "seed": seed,
             "width": w, "height": h, "prompt": j["prompt"],
             "avoid": avoid or [], "effective_prompt": effective_prompt,
+            "format": "webp", "bytes": path.stat().st_size,
         }
-        print(f'  ✓ {j["id"]} -> {path}  (seed={seed}, {time.time() - t0:.1f}s)')
+        print(f'  ✓ {j["id"]} -> {path}  (seed={seed}, {kb:.0f} KB, {time.time() - t0:.1f}s)')
 
     ordered = [results[j["id"]] for j in man["jobs"] if j["id"] in results]
     results_path.write_text(json.dumps(ordered, indent=2))
