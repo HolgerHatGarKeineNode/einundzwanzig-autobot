@@ -59,6 +59,19 @@ dort nachsehen statt raten — sonst `docs/` (Plattform-Karten) verwenden:
    Übersprungen NUR ohne `OPENROUTER_API_KEY` oder auf ausdrücklichen Wunsch des
    Nutzers. Headless-Publish-Pfad (falls Browser-Runner nicht laufen):
    `tools/quick-edit-node.cjs` / Upload via `blossom-upload-node.cjs`.
+8. **Artikel-Erzeugung läuft über den 8-Team-Review-Workflow** (stehende
+   Freigabe für Workflow-Orchestrierung). Wird ein NEUER Artikel aus einem
+   Prompt/einer Aussage geschrieben, automatisch den Workflow
+   `.claude/workflows/artikel-teams.js` starten (`Workflow` mit `name:
+   "artikel-teams"`, sonst `scriptPath` auf diese Datei; `args.statement` = die
+   Aussage/das Thema). Er erdet auf beide aktiven Groundings, schreibt einen
+   nüchternen Entwurf und härtet ihn in 2 Runden durch 8 Teams: Hoppe,
+   Kryptoökonomie, Gelassenheit (Ton), Anarchisten (Souveränität), Entschärfung
+   (Vorwürfe raus), Anti-Wiederholung, Vermenschlichung, Angriffsflächen
+   (Unterstellungen/Tatsachenbehauptungen entfernen). Ergebnis ist NUR Text →
+   nach `sessions/<run>/article.md` schreiben, dann `must-not`-Grep-Gate
+   (`WRITING_RULES.local.md`). Audio/Draft/Publish bleiben davon unberührt und
+   folgen weiter Regel 1+7 (erst nach ausdrücklicher Freigabe).
 
 ## Session-Start (nach Kontext-Reset)
 

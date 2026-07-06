@@ -6,6 +6,7 @@
 
   "_blossomServers": "Blossom-Server (BUD-02) für Bild-Uploads — der ERSTE Eintrag ist Primary und Default für gen-upload-job.cjs.",
   "blossomServers": [
+    "https://blossom.einundzwanzig.space",
     "https://cdn.satellite.earth",
     "https://nostr.download",
     "https://blossom.primal.net"
