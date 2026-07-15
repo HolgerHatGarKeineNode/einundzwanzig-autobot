@@ -21,6 +21,12 @@
 //   in localStorage — erst dann Publish.
 // - window.nostr ist ein Laufzeit-Shim: nach Reload/Idle weg → vorher
 //   setup-session.run.js ausführen. Dieser Runner prüft das und bricht sauber ab.
+// - TAG-FELD: nur echte Tastatur erzeugt Chips (setNative + synthetisches keydown
+//   NICHT). Placeholder wandert ("Add tag..." → "Add tag (or comma-separated
+//   list)...") → Präfix-Selektor. Bricht das, meldet das Gate tagsOk:false und es
+//   sieht wie ein Content-Fehler aus, ist aber ein Selektor-Bruch.
+// - localStorage-Draft wird erst ~1s nach "Save locally" geschrieben → vorher
+//   gelesen liefert den ALTEN Stand (Phantom-Fehler in der Verifikation).
 // - Datei MUSS genau EIN `async (page) => {…}`-Ausdruck bleiben.
 async (page) => {
   const fs = require('fs')
@@ -50,7 +56,6 @@ async (page) => {
     const title = document.querySelector('input[placeholder="Enter article title..."]')
     const summary = document.querySelector('textarea[placeholder="Brief summary of your article..."]')
     const image = document.querySelector('input[placeholder="Featured Image"]')
-    const tag = document.querySelector('input[placeholder="Add tag..."]')
     if (!title) return { ok: false, error: 'Editor nicht geladen (Titel-Feld fehlt)' }
     if (job.title) setNative(title, job.title)
     if (job.summary && summary) setNative(summary, job.summary)
@@ -58,15 +63,24 @@ async (page) => {
     // (Draft nach Publish gelöscht, articleStore-Miss) → sonst publiziert man
     // ohne Cover/Hashtags (genau so ist einmal das Featured Image verschwunden).
     if (job.image && image) setNative(image, job.image)
-    if (tag) {
-      for (const t of (job.hashtags || [])) {
-        setNative(tag, t)
-        tag.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
-      }
-    }
     return { ok: true, loadedTitle: title.value }
   })
   if (!fill.ok) return { ok: false, stage: 'load', ...fill }
+
+  // 2b) Tags: NUR mit echter Tastatur — setNative + synthetisches keydown erzeugt
+  // keine Chips (Juli 2026: Draft lief bis ans verify-draft-Gate, Tags leer).
+  // Placeholder-Präfix statt exaktem Text: hieß erst "Add tag...", jetzt
+  // "Add tag (or comma-separated list)..." — das Feld nimmt die Liste in einem Rutsch.
+  const TAG_SEL = 'input[placeholder^="Add tag"]'
+  const hashtags = await page.evaluate(() => window.__editJob.hashtags || [])
+  if (hashtags.length) {
+    if (!(await page.$(TAG_SEL))) return { ok: false, stage: 'tags', error: 'Tag-Feld nicht gefunden (Placeholder geändert?) — Selektor: ' + TAG_SEL }
+    await page.click(TAG_SEL)
+    await page.fill(TAG_SEL, hashtags.join(','))
+    await page.waitForTimeout(200)
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+  }
 
   // 3) Inhalt ersetzen (echte Selektion, dann Paste).
   await page.click('.milkdown-editor .ProseMirror', { position: { x: 200, y: 100 } })
@@ -113,7 +127,9 @@ async (page) => {
     el.click()
     return { ok: true }
   })
-  await page.waitForTimeout(800)
+  // Die App schreibt den Draft erst ~1s nach dem Klick in localStorage — früher
+  // gelesen liefert 5b den ALTEN Stand (meldet dann z. B. tagsOk:false).
+  await page.waitForTimeout(1800)
 
   // 5b) MASSGEBLICHE Verifikation: der GESPEICHERTE Draft (das ist der Stand,
   // den content.value hatte — also genau das, was Publish signieren würde).
